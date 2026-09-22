@@ -247,15 +247,37 @@ Future<String?> _pickFolder({required String title}) async {
 // Helper: Find makeappx.exe and config.md
 // ---------------------------------------------------------------------------
 String? _findMakeAppx(String exeDir) {
-  final candidates = [
+  // 1. Check local assets folder first
+  final localCandidates = [
     p.join(exeDir, 'assets', 'makeappx.exe'),
     p.join(exeDir, 'makeappx.exe'),
     p.join(exeDir, '..', 'assets', 'makeappx.exe'),
     p.join(Directory.current.path, 'assets', 'makeappx.exe'),
   ];
-  for (var path in candidates) {
+  for (var path in localCandidates) {
     if (File(path).existsSync()) return path;
   }
+
+  // 2. Automatically locate makeappx in Windows Kits if local one is absent/broken
+  final sdkBase = Directory(r'C:\Program Files (x86)\Windows Kits\10\bin');
+  if (sdkBase.existsSync()) {
+    final versions = sdkBase
+        .listSync()
+        .whereType<Directory>()
+        .where((d) => RegExp(r'^\d+\.').hasMatch(p.basename(d.path)))
+        .toList();
+
+    // Sort descending to get the newest SDK version (e.g. 10.0.26100.0)
+    versions.sort((a, b) => p.basename(b.path).compareTo(p.basename(a.path)));
+
+    for (var versionDir in versions) {
+      final x64Path = p.join(versionDir.path, 'x64', 'makeappx.exe');
+      if (File(x64Path).existsSync()) {
+        return x64Path;
+      }
+    }
+  }
+
   return null;
 }
 
