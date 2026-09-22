@@ -7,15 +7,15 @@ void main() async {
   print('       MSIX File Association Tool    ');
   print('====================================\n');
 
-  // 1. Locate makeappx.exe
+  // 1. Locate working makeappx.exe
   final exeDir = p.dirname(Platform.resolvedExecutable);
   final makeappxPath = _findMakeAppx(exeDir);
   if (makeappxPath == null) {
-    print('❌ Error: Could not find makeappx.exe in "assets" folder.');
+    print('❌ Error: Could not find makeappx.exe in Windows Kits or assets folder.');
     _pauseAndExit();
     return;
   }
-  print('✔ Found makeappx: $makeappxPath');
+  print('✔ Using makeappx: $makeappxPath');
 
   // 2. Select MSIX file via Windows Dialog
   print('\nPlease choose the input .msix file from the dialog...');
@@ -66,12 +66,11 @@ void main() async {
   try {
     // Extract MSIX
     print('\n[1/3] Extracting MSIX package...');
-    final unpackResult = await Process.run(makeappxPath, [
-      'unpack',
-      '/p', inputMsixPath,
-      '/d', tempExtractDir.path,
-      '/o',
-    ]);
+    final unpackResult = await Process.run(
+      makeappxPath,
+      ['unpack', '/p', inputMsixPath, '/d', tempExtractDir.path, '/o'],
+      workingDirectory: p.dirname(makeappxPath),
+    );
 
     if (unpackResult.exitCode != 0) {
       print('❌ Unpack failed:\n${unpackResult.stderr}\n${unpackResult.stdout}');
@@ -95,12 +94,11 @@ void main() async {
     final originalName = p.basenameWithoutExtension(inputMsixPath);
     final finalOutputPath = p.join(outputDir, '${originalName}_Modified.msix');
 
-    final packResult = await Process.run(makeappxPath, [
-      'pack',
-      '/d', tempExtractDir.path,
-      '/p', finalOutputPath,
-      '/o',
-    ]);
+    final packResult = await Process.run(
+      makeappxPath,
+      ['pack', '/d', tempExtractDir.path, '/p', finalOutputPath, '/o'],
+      workingDirectory: p.dirname(makeappxPath),
+    );
 
     if (packResult.exitCode != 0) {
       print('❌ Repack failed:\n${packResult.stderr}\n${packResult.stdout}');
@@ -113,7 +111,6 @@ void main() async {
     print('Modified MSIX created at:\n$finalOutputPath');
     print('====================================');
   } finally {
-    // Clean up temporary extracted folder
     if (tempExtractDir.existsSync()) {
       tempExtractDir.deleteSync(recursive: true);
     }
@@ -154,7 +151,6 @@ void _updateManifest(File manifestFile, List<FileAssociation> associations) {
 
   // Append new <uap:Extension> blocks
   for (var item in associations) {
-    // Alphanumeric name without dots (required by Windows)
     final sanitizedName = item.extension.replaceAll('.', '').toLowerCase() + 'file';
 
     final extensionXml = XmlElement(
@@ -178,7 +174,6 @@ void _updateManifest(File manifestFile, List<FileAssociation> associations) {
     extensionsElement.children.add(extensionXml);
   }
 
-  // Write updated manifest
   manifestFile.writeAsStringSync(document.toXmlString(pretty: true, indent: '  '));
 }
 
@@ -202,7 +197,6 @@ List<FileAssociation> _parseConfig(String text) {
     var ext = lines[0].trim().replaceAll('"', '').replaceAll("'", "");
     if (!ext.startsWith('.')) ext = '.$ext';
 
-    // Using triple-quoted raw string to prevent parsing conflicts
     final nameMatch = RegExp(r'''display_name:\s*["']?([^"'\r\n]+)["']?''').firstMatch(block);
     final displayName = nameMatch?.group(1)?.trim() ?? ext;
 
@@ -212,7 +206,7 @@ List<FileAssociation> _parseConfig(String text) {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: File and Folder Dialogs using Windows PowerShell
+// Helper: File and Folder Dialogs
 // ---------------------------------------------------------------------------
 Future<String?> _pickFile({required String title, required String filter}) async {
   final script = '''
@@ -244,21 +238,10 @@ Future<String?> _pickFolder({required String title}) async {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: Find makeappx.exe and config.md
+// Helper: Find makeappx.exe (Prioritizes official SDK installation)
 // ---------------------------------------------------------------------------
 String? _findMakeAppx(String exeDir) {
-  // 1. Check local assets folder first
-  final localCandidates = [
-    p.join(exeDir, 'assets', 'makeappx.exe'),
-    p.join(exeDir, 'makeappx.exe'),
-    p.join(exeDir, '..', 'assets', 'makeappx.exe'),
-    p.join(Directory.current.path, 'assets', 'makeappx.exe'),
-  ];
-  for (var path in localCandidates) {
-    if (File(path).existsSync()) return path;
-  }
-
-  // 2. Automatically locate makeappx in Windows Kits if local one is absent/broken
+  // 1. Check official Windows Kits first (guaranteed to work)
   final sdkBase = Directory(r'C:\Program Files (x86)\Windows Kits\10\bin');
   if (sdkBase.existsSync()) {
     final versions = sdkBase
@@ -267,7 +250,6 @@ String? _findMakeAppx(String exeDir) {
         .where((d) => RegExp(r'^\d+\.').hasMatch(p.basename(d.path)))
         .toList();
 
-    // Sort descending to get the newest SDK version (e.g. 10.0.26100.0)
     versions.sort((a, b) => p.basename(b.path).compareTo(p.basename(a.path)));
 
     for (var versionDir in versions) {
@@ -276,6 +258,17 @@ String? _findMakeAppx(String exeDir) {
         return x64Path;
       }
     }
+  }
+
+  // 2. Fallback to local assets if SDK not found
+  final localCandidates = [
+    p.join(exeDir, 'assets', 'makeappx.exe'),
+    p.join(exeDir, 'makeappx.exe'),
+    p.join(exeDir, '..', 'assets', 'makeappx.exe'),
+    p.join(Directory.current.path, 'assets', 'makeappx.exe'),
+  ];
+  for (var path in localCandidates) {
+    if (File(path).existsSync()) return path;
   }
 
   return null;

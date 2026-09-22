@@ -1,3 +1,5 @@
 - file_extensions:
     - extension: .ppmsolved
         - display_name: "Solved Past Paper"
+    - extension: .hehe
+        - display_name: "hehe"
