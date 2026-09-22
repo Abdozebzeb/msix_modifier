@@ -1,0 +1,3 @@
+- file_extensions:
+    - extension: .ppmsolved
+        - display_name: "Solved Past Paper"

@@ -202,7 +202,8 @@ List<FileAssociation> _parseConfig(String text) {
     var ext = lines[0].trim().replaceAll('"', '').replaceAll("'", "");
     if (!ext.startsWith('.')) ext = '.$ext';
 
-    final nameMatch = RegExp(r'display_name:\s*["\']?([^"\'\r\n]+)["\']?').firstMatch(block);
+    // Using triple-quoted raw string to prevent parsing conflicts
+    final nameMatch = RegExp(r'''display_name:\s*["']?([^"'\r\n]+)["']?''').firstMatch(block);
     final displayName = nameMatch?.group(1)?.trim() ?? ext;
 
     results.add(FileAssociation(extension: ext, displayName: displayName));
