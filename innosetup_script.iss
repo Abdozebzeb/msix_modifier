@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "ABDOZEBZEB MSIX FILE EXTENSION"
-#define MyAppVersion "1.0"
+#define MyAppVersion "2.0"
 #define MyAppPublisher "abdozebzeb"
 #define MyAppURL "https://www.example.com/"
 #define MyAppExeName "msix_modifier.exe"
