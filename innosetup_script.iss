@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "ABDOZEBZEB MSIX FILE EXTENSION"
+#define MyAppName "MSIX Modifier By abdozebzeb"
 #define MyAppVersion "2.0"
 #define MyAppPublisher "abdozebzeb"
 #define MyAppURL "https://www.example.com/"
@@ -34,7 +34,7 @@ DisableProgramGroupPage=yes
 ; Remove the following line to run in administrative install mode (install for all users).
 PrivilegesRequired=lowest
 OutputDir=.\build\innooutput
-OutputBaseFilename=abdozebzeb_msiz_fileextension_setup
+OutputBaseFilename=msix_modifier_setup_by_abdozebzeb_v{#MyAppVersion}
 SolidCompression=yes
 WizardStyle=modern dark polar
 
